@@ -1,0 +1,207 @@
+CREATE DATABASE review4;
+USE review4;
+
+
+CREATE TABLE student (
+userid INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL,
+password VARCHAR(10) NOT NULL CHECK (LENGTH(password) >= 6), mail VARCHAR(255) UNIQUE
+);
+
+
+CREATE TABLE admin (
+admin_id INT PRIMARY KEY, name VARCHAR(50) NOT NULL,
+password VARCHAR(10) NOT NULL, mail VARCHAR(255) UNIQUE
+);
+
+
+CREATE TABLE subjects (
+subjectid INT AUTO_INCREMENT PRIMARY KEY,
+subjectname VARCHAR(255) UNIQUE
+
+);
+CREATE TABLE file_type_reference (	
+ 
+file_type_id INT AUTO_INCREMENT PRIMARY KEY,
+file_type_name ENUM('notes', 'pyq', 'impquestions') UNIQUE NOT NULL
+);
+
+
+CREATE TABLE files (
+fileid INT AUTO_INCREMENT PRIMARY KEY,
+subjectid INT, file_type_id INT,
+FOREIGN KEY (subjectid) REFERENCES subjects(subjectid),
+FOREIGN KEY (file_type_id) REFERENCES file_type_reference(file_type_id)
+);
+
+
+CREATE TABLE feedbacks (
+feedbackid INT AUTO_INCREMENT PRIMARY KEY,
+
+userid_sender INT, feedbackmessage TEXT,
+FOREIGN KEY (userid_sender) REFERENCES student(userid)
+);
+
+
+CREATE TABLE downloads (
+downloadid INT AUTO_INCREMENT PRIMARY KEY,
+fileid INT, userid INT,
+FOREIGN KEY (fileid) REFERENCES files(fileid),	
+ 
+FOREIGN KEY (userid) REFERENCES student(userid)
+
+);
+CREATE TABLE bookmark (
+bookmarkid INT AUTO_INCREMENT PRIMARY KEY,
+userid INT, fileid INT,
+FOREIGN KEY (userid) REFERENCES student(userid), FOREIGN KEY (fileid) REFERENCES files(fileid)
+);
+CREATE TABLE filerequests (
+requestid INT AUTO_INCREMENT PRIMARY KEY,
+userid INT,
+request_message TEXT NOT NULL,
+
+FOREIGN KEY (userid) REFERENCES student(userid)
+);
+CREATE TABLE announcement (
+announcementid INT AUTO_INCREMENT PRIMARY KEY, adminid INT,
+message TEXT,
+FOREIGN KEY (adminid) REFERENCES admin(admin_id)
+
+);
+
+
+CREATE TABLE logs (
+logid INT AUTO_INCREMENT PRIMARY KEY,	
+ 
+action TEXT
+
+);
+
+
+START TRANSACTION;
+INSERT INTO student (name, password, mail)
+VALUES ('Kaki Nikhilesh', 'pass123', 'nikhilesh@gmail.com'), ('Bharath', 'pass456', 'bharath@gmail.com'),
+('Harsha', 'pass897', 'shampoo@gmail.com'); COMMIT;
+
+START TRANSACTION;
+INSERT INTO admin (admin_id, name, password, mail) VALUES (1, 'Admin A', 'adminpass', 'admina@gmail.com'),
+(2, 'Admin B', 'admin567', 'adminb@gmail.com'),
+(3, 'Admin C', 'admin999', 'adminc@gmail.com'); COMMIT;
+
+
+START TRANSACTION;
+INSERT INTO subjects (subjectname) VALUES ('Database Management Systems'),
+('Computer Networks'), ('Probability And Statistics'), ('Artificial Intelligence'),
+('Social Engineering');	
+ 
+COMMIT;
+
+
+START TRANSACTION;
+INSERT INTO file_type_reference (file_type_name) VALUES ('notes'), ('pyq'), ('impquestions'); COMMIT;
+
+
+START TRANSACTION;
+
+INSERT INTO files (subjectid, file_type_id) VALUES (1, 1), (3, 2), (2, 3), (4, 3), (5, 1), (1, 1); COMMIT;
+
+START TRANSACTION;
+INSERT INTO feedbacks (userid_sender, feedbackmessage) VALUES (1, 'Great notes!'),
+(2, 'Helpful content!'),
+(3, 'Good'); COMMIT;
+
+START TRANSACTION;
+INSERT INTO downloads (fileid, userid) VALUES (1, 1), (2, 2), (3, 1);
+COMMIT;
+
+ 
+START TRANSACTION;
+
+INSERT INTO bookmark (userid, fileid) VALUES (1, 1), (2, 2), (3, 3); COMMIT;
+
+START TRANSACTION;
+INSERT INTO filerequests (userid, request_message) VALUES (1, 'Need DBMS CT-2 Papers'),
+(2, 'Need End Sem Papers For DBMS'); COMMIT;
+
+START TRANSACTION;
+INSERT INTO announcement (adminid, message) VALUES (1, 'New notes uploaded!'),
+(2, 'Exam schedule released.'), (3, 'Results Are Out');
+COMMIT;
+
+
+CREATE VIEW feedback_view AS
+SELECT f.feedbackid, s.name AS student_name, f.feedbackmessage FROM feedbacks f
+JOIN student s ON f.userid_sender = s.userid;
+CREATE VIEW file_requests_view AS	
+ 
+SELECT fr.requestid, s.name AS student_name, fr.request_message FROM filerequests fr
+JOIN student s ON fr.userid = s.userid;
+
+
+CREATE TRIGGER after_student_insert AFTER INSERT ON student
+FOR EACH ROW
+INSERT INTO logs (action) VALUES (CONCAT('New student registered: ', NEW.name));
+
+
+CREATE TRIGGER after_announcement AFTER INSERT ON announcement FOR EACH ROW
+INSERT INTO logs (action) VALUES (CONCAT('Admin ID ', NEW.adminid, ' made an announcement.'));
+
+
+CREATE TRIGGER after_file_insert AFTER INSERT ON files
+FOR EACH ROW
+
+INSERT INTO logs (action) VALUES (CONCAT('New file added for subject ID: ', NEW.subjectid));
+
+
+CREATE TRIGGER after_feedback_insert AFTER INSERT ON feedbacks
+FOR EACH ROW	
+ 
+INSERT INTO logs (action) VALUES (CONCAT('Feedback received from User ID: ', NEW.userid_sender));
+
+
+CREATE TRIGGER after_download_insert AFTER INSERT ON downloads
+FOR EACH ROW
+INSERT INTO logs (action) VALUES (CONCAT('User ID ', NEW.userid, ' downloaded file ID ', NEW.fileid));
+
+
+CREATE TRIGGER after_bookmark_insert AFTER INSERT ON bookmark
+FOR EACH ROW
+INSERT INTO logs (action) VALUES (CONCAT('User ID ', NEW.userid, ' bookmarked file ID ', NEW.fileid));
+
+
+DELIMITER //
+CREATE PROCEDURE show_students() BEGIN
+DECLARE done INT DEFAULT FALSE;
+DECLARE student_name VARCHAR(50);
+DECLARE cur CURSOR FOR SELECT name FROM student;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+OPEN cur;	
+ 
+read_loop: LOOP
+
+FETCH cur INTO student_name; IF done THEN
+LEAVE read_loop; END IF;
+SELECT student_name; END LOOP;
+CLOSE cur; END // DELIMITER ;
+
+DELIMITER //
+CREATE PROCEDURE show_subjects() BEGIN
+DECLARE done INT DEFAULT FALSE;
+DECLARE subj_name VARCHAR(255);
+DECLARE cur CURSOR FOR SELECT subjectname FROM subjects; DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+OPEN cur; read_loop: LOOP
+FETCH cur INTO subj_name; IF done THEN
+LEAVE read_loop;	
+ 
+END IF;
+
+SELECT subj_name; END LOOP;
+CLOSE cur; END // DELIMITER ;
+
+
+SELECT * FROM student; SELECT * FROM admin; SELECT * FROM subjects;
+SELECT * FROM file_type_reference; SELECT * FROM files;
+SELECT * FROM downloads; SELECT * FROM bookmark; SELECT * FROM feedbacks; SELECT * FROM filerequests; SELECT * FROM announcement; SELECT * FROM logs;
+SELECT * FROM feedback_view; SELECT * FROM file_requests_view; CALL show_students();
+CALL show_subjects();
