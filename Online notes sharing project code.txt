@@ -17,7 +17,6 @@ password VARCHAR(10) NOT NULL, mail VARCHAR(255) UNIQUE
 CREATE TABLE subjects (
 subjectid INT AUTO_INCREMENT PRIMARY KEY,
 subjectname VARCHAR(255) UNIQUE
-
 );
 CREATE TABLE file_type_reference (	
  
